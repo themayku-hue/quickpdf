@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>लाइव कैमरा स्कैनर</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background: #f0f2f5; padding: 15px; display: flex; justify-content: center; }
+        .container { max-width: 600px; width: 100%; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #1e3a8a; text-align: center; margin-bottom: 20px; font-size: 22px; }
+        .back-link { display: inline-block; margin-bottom: 15px; color: #4f46e5; text-decoration: none; font-weight: bold; font-size: 14px; }
+        
+        .box { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 25px; text-align: center; background: #f8fafc; margin-bottom: 20px; }
+        .box p { font-weight: bold; margin-bottom: 12px; color: #475569; }
+        input[type="file"] { font-size: 15px; width: 100%; padding: 10px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer; }
+        
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; background: #f8fafc; min-height: 120px; }
+        .img-card { position: relative; border: 1px solid #cbd5e1; padding: 4px; background: white; border-radius: 6px; text-align: center; }
+        .img-card img { width: 100%; height: 100px; object-fit: contain; border-radius: 4px; }
+        .remove-btn { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        
+        .btn-print { background: #4f46e5; color: white; border: none; width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" class="back-link">⬅ मुख्य मेनू पर वापस जाएं</a>
+        <h1>स्मार्ट कैमरा स्कैनर</h1>
+
+        <div class="box">
+            <p>कैमरा चालू करने के लिए फाइल बटन दबाएं</p>
+            <!-- Native control opens camera directly on phone and allows file picking -->
+            <input type="file" id="scanInput" accept="image/*" multiple>
+        </div>
+
+        <canvas id="cropCanvas" style="display:none;"></canvas>
+
+        <div>
+            <p style="font-weight: bold; margin-bottom: 10px;">स्कैन किए गए पेजेस (Auto-Cropped):</p>
+            <div id="previewGrid" class="preview-grid"></div>
+        </div>
+
+        <button id="printPdfBtn" class="btn-print">इस फाइल का PDF डाउनलोड करें</button>
+    </div>
+
+    <script>
+        let scannedImages = [];
+        const scanInput = document.getElementById('scanInput');
+        const previewGrid = document.getElementById('previewGrid');
+        const cropCanvas = document.getElementById('cropCanvas');
+
+        scanInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    processAutoCrop(event.target.result);
+                };
+                reader.readAsDataURL(file);
+            });
+            scanInput.value = "";
+        });
+
+        function processAutoCrop(dataUrl) {
+            const img = new Image();
+            img.src = dataUrl;
+            img.onload = function() {
+                const ctx = cropCanvas.getContext('2d');
+                cropCanvas.width = img.width;
+                cropCanvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                try {
+                    const imgData = ctx.getImageData(0, 0, img.width, img.height);
+                    const data = imgData.data;
+                    let minX = img.width, maxX = 0, minY = img.height, maxY = 0;
+                    let points = 0;
+
+                    for (let y = 0; y < img.height; y += 5) {
+                        for (let x = 0; x < img.width; x += 5) {
+                            const i = (y * img.width + x) * 4;
+                            if ((data[i] + data[i+1] + data[i+2]) / 3 > 75) { 
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                                if (y < minY) minY = y;
+                                if (y > maxY) maxY = y;
+                                points++;
+                            }
+                        }
+                    }
+
+                    minX = Math.max(0, minX - 15); minY = Math.max(0, minY - 15);
+                    maxX = Math.min(img.width, maxX + 15); maxY = Math.min(img.height, maxY + 15);
+                    const w = maxX - minX; const h = maxY - minY;
+
+                    if (points > 50 && w > 100 && h > 100) {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = w; tempCanvas.height = h;
+                        tempCanvas.getContext('2d').drawImage(cropCanvas, minX, minY, w, h, 0, 0, w, h);
+                        scannedImages.push(tempCanvas.toDataURL('image/jpeg', 0.9));
+                    } else {
+                        scannedImages.push(dataUrl);
+                    }
+                } catch(e) {
+                    scannedImages.push(dataUrl);
+                }
+                renderPreviews();
+            };
+        }
+
+        function renderPreviews() {
+            previewGrid.innerHTML = '';
+            scannedImages.forEach((src, index) => {
+                const div = document.createElement('div');
+                div.className = 'img-card';
+                div.innerHTML = `<img src="${src}"><button class="remove-btn" onclick="deleteItem(${index})">X</button>`;
+                previewGrid.appendChild(div);
+            });
+        }
+
+        window.deleteItem = function(index) {
+            scannedImages.splice(index, 1);
+            renderPreviews();
+        };
+
+        document.getElementById('printPdfBtn').addEventListener('click', () => {
+            if (scannedImages.length === 0) return alert("कृपया पहले फोटो खींचें!");
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><style>@page{margin:0mm;} body{margin:0; text-align:center;} img{width:100%; max-height:100vh; object-fit:contain; page-break-after:always;}</style></head><body>');
+            scannedImages.forEach(src => printWindow.document.write(`<img src="${src}">`));
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); printWindow.close(); }, 300);
+        });
+    </script>
+</body>
+</html>

@@ -3,110 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>इमेज टूल और PDF</title>
+    <title>ऑल-इन-वन यूटिलिटी टूलकिट</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        body { background: #f0f2f5; padding: 15px; display: flex; justify-content: center; }
-        .container { max-width: 600px; width: 100%; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #1e3a8a; text-align: center; margin-bottom: 20px; font-size: 22px; }
-        .upload-section { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; background: #f8fafc; margin-bottom: 20px; }
-        .upload-section p { font-weight: bold; margin-bottom: 10px; color: #475569; }
-        .preview-title { font-size: 16px; color: #334155; margin-bottom: 10px; font-weight: bold; }
-        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; background: #f8fafc; min-height: 100px; }
-        .img-card { position: relative; border: 1px solid #cbd5e1; padding: 4px; background: white; border-radius: 6px; text-align: center; }
-        .img-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 4px; }
-        .remove-btn { position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-weight: bold; }
-        .btn-print { background: #4f46e5; color: white; border: none; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px; }
-        .btn-print:hover { background: #4338ca; }
+        body { background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+        .menu-container { max-width: 500px; width: 100%; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        h1 { color: #1e3a8a; margin-bottom: 10px; font-size: 24px; }
+        p { color: #64748b; margin-bottom: 25px; font-size: 14px; }
+        .menu-btn { display: block; text-decoration: none; color: white; padding: 18px; margin-bottom: 15px; border-radius: 10px; font-size: 16px; font-weight: bold; transition: transform 0.2s, background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .menu-btn:hover { transform: translateY(-2px); }
+        .btn-scan { background: #4f46e5; } .btn-scan:hover { background: #4338ca; }
+        .btn-pass { background: #0ea5e9; } .btn-pass:hover { background: #0284c7; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>डॉक्यूमेंट और इमेज टूलकिट</h1>
-
-        <!-- Native Input for Gallery & Live Camera -->
-        <div class="upload-section">
-            <p>फोटो चुनें या लाइव कैमरा से खींचें</p>
-            <!-- capture="environment" will directly open rear camera on mobiles -->
-            <input type="file" id="nativeInput" accept="image/*" multiple style="font-size: 14px;">
-        </div>
-
-        <!-- Preview Section -->
-        <div>
-            <p class="preview-title">आपकी तस्वीरें (Preview):</p>
-            <div id="previewGrid" class="preview-grid">
-                <!-- Images will show here -->
-            </div>
-        </div>
-
-        <!-- Action Button -->
-        <button id="printPdfBtn" class="btn-print">इन फोटो का PDF बनाएं / प्रिंट करें</button>
+    <div class="menu-container">
+        <h1>डिजिटल वर्क टूलकिट</h1>
+        <p>आपको जो काम करना है, उस पर क्लिक करें</p>
+        
+        <!-- Dusra page link -->
+        <a href="scanner.html" class="menu-btn btn-scan">📷 लाइव कैमरा स्कैनर (Auto-Crop & PDF)</a>
+        
+        <!-- Tisra page link -->
+        <a href="passport.html" class="menu-btn btn-pass">🖼️ पासपोर्ट साइज फोटो मेकर</a>
     </div>
 
-    <script>
-        let imageList = [];
-        const nativeInput = document.getElementById('nativeInput');
-        const previewGrid = document.getElementById('previewGrid');
-
-        // Handle Image selection and Camera captures flawlessly
-        nativeInput.addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    imageList.push(event.target.result);
-                    renderImages();
-                };
-                reader.readAsDataURL(file);
-            });
-            nativeInput.value = ""; // Clear input
-        });
-
-        // Render function
-        function renderImages() {
-            previewGrid.innerHTML = '';
-            imageList.forEach((src, index) => {
-                const div = document.createElement('div');
-                div.className = 'img-card';
-                div.innerHTML = `
-                    <img src="${src}">
-                    <button class="remove-btn" onclick="deleteImage(${index})">X</button>
-                `;
-                previewGrid.appendChild(div);
-            });
-        }
-
-        window.deleteImage = function(index) {
-            imageList.splice(index, 1);
-            renderImages();
-        };
-
-        // Standard Print to PDF feature that never fails locally
-        document.getElementById('printPdfBtn').addEventListener('click', () => {
-            if (imageList.length === 0) {
-                alert("कृपया पहले कोई फोटो चुनें!");
-                return;
-            }
-
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>PDF Document</title>');
-            printWindow.document.write('<style>body{margin:0;padding:0;text-align:center;} img{width:100%; max-height:98vh; object-fit:contain; page-break-after:always; margin-bottom:10px;}</style>');
-            printWindow.document.write('</head><body>');
-            
-            imageList.forEach(src => {
-                printWindow.document.write(`<img src="${src}">`);
-            });
-            
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            
-            printWindow.focus();
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 300);
-        });
-    </script>
 </body>
 </html>
